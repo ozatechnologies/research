@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Paper Sharing Network</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; text-align: center; }
+        .container { width: 80%; margin: 0 auto; }
+        h1 { margin-top: 20px; }
+        .paper-list { margin-top: 20px; }
+        .paper-item { margin-bottom: 15px; }
+        .upload-btn, #shareBtn, #generateQRBtn { margin-top: 10px; padding: 10px 20px; background-color: #6200ea; color: white; border: none; cursor: pointer; }
+        .upload-btn:hover, #shareBtn:hover, #generateQRBtn:hover { background-color: #3700b3; }
+        #qrCode { margin-top: 20px; }
+        input[type="file"], input[type="text"] { padding: 10px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Research Paper Sharing Network</h1>
+        
+        <!-- Upload Section -->
+        <input type="file" id="paperUpload" accept=".pdf" />
+        <input type="text" id="paperTitle" placeholder="Enter paper title" />
+        <button class="upload-btn" id="uploadBtn">Upload Paper</button>
+
+        <!-- List of uploaded papers -->
+        <div class="paper-list" id="paperList"></div>
+
+        <!-- QR Code Generation Section -->
+        <h3>Generate QR Code for First Paper</h3>
+        <button id="generateQRBtn">Generate QR Code</button>
+        <canvas id="qrCode"></canvas>
+
+        <!-- Share Button Section -->
+        <h3>Share First Paper Link</h3>
+        <button id="shareBtn">Share Link</button>
+    </div>
+
+    <!-- Firebase SDKs (version 8) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
+    <!-- Application logic -->
+    <script src="app.js"></script>
+</body>
+</html>
