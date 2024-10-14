@@ -3,53 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Research Paper Sharing Platform</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; text-align: center; }
-        .container { width: 80%; margin: 0 auto; padding-top: 20px; }
-        h1 { margin-bottom: 20px; }
-        input[type="text"], textarea { width: 100%; padding: 10px; margin-top: 10px; }
-        button { margin-top: 10px; padding: 10px 20px; background-color: #6200ea; color: white; border: none; cursor: pointer; }
-        button:hover { background-color: #3700b3; }
-        .article-list { margin-top: 20px; }
-        .article-item { padding: 10px; border-bottom: 1px solid #ddd; margin-bottom: 10px; }
-        #searchResults { margin-top: 20px; }
-        .admin-panel { display: none; margin-top: 20px; }
-    </style>
+    <title>Research Sharing Platform</title>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-storage.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Research Paper Sharing Platform</h1>
+    <h1>Research Paper Sharing Platform</h1>
 
-        <!-- Article Submission Form -->
-        <h3>Submit Your Research Paper</h3>
-        <input type="text" id="title" placeholder="Title of your paper">
-        <textarea id="description" rows="5" placeholder="Describe your research (max 280 characters)"></textarea>
-        <button id="submitBtn">Submit Article</button>
+    <!-- Auth Section -->
+    <button onclick="googleSignIn()">Sign in with Google</button>
+    <button onclick="googleSignOut()">Sign out</button>
+    <div id="user-name"></div>
 
-        <!-- Search Functionality -->
-        <h3>Search Research Papers</h3>
-        <input type="text" id="searchInput" placeholder="Search by title or description">
-        <button id="searchBtn">Search</button>
-        <div id="searchResults"></div>
+    <!-- Text Area for Research Papers -->
+    <textarea id="research-content" placeholder="Write your research paper here..." rows="8"></textarea><br>
 
-        <!-- Approved Articles Feed -->
-        <h3>Recent Research Papers</h3>
-        <div class="article-list" id="articleList"></div>
+    <!-- PDF Upload -->
+    <input type="file" id="pdf-upload" accept=".pdf" />
 
-        <!-- Admin Panel (for approving/rejecting submissions) -->
-        <div class="admin-panel" id="adminPanel">
-            <h3>Admin Panel: Approve or Reject Submissions</h3>
-            <div class="article-list" id="pendingArticles"></div>
-        </div>
-    </div>
+    <!-- Submit Button -->
+    <button onclick="submitResearch()">Submit Research</button>
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <hr>
 
-    <!-- Application logic -->
-    <script src="app.js"></script>
+    <!-- Display Research Papers and Comments -->
+    <h2>Research Feed</h2>
+    <div id="research-feed"></div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAWt-TWSk6PnuUtcwJMY5h-5RoCZI--0Oc",
+            authDomain: "dev-database-a5d9d.firebaseapp.com",
+            databaseURL: "https://dev-database-a5d9d.firebaseio.com",
+            projectId: "dev-database-a5d9d",
+            storageBucket: "dev-database-a5d9d.appspot.com",
+            messagingSenderId: "195525219078",
+            appId: "1:195525219078:web:ef153036d8b202cbe84487",
+            measurementId: "G-YKRTM0R61H"
+        };
+        firebase.initializeApp(firebaseConfig);
+
+        // Initialize Firebase Auth and Realtime DB
+        const auth = firebase.auth();
+        const db = firebase.database();
+        const storage = firebase.storage();
+
+        // Google Auth Provider
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        // Sign In Function
+        function googleSignIn() {
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    console.log("User signed in:", result.user);
+                    document.getElementById("user-name").innerText = `Welcome, ${result.user.displayName}`;
+                })
+                .catch((error) => {
+                    console.error("Sign In Error:", error);
+                });
+        }
+
+        // Sign Out Function
+        function googleSignOut() {
+            auth.signOut().then(() => {
+                document.getElementById("user-name").innerText = '';
+                console.log("User signed out");
+            }).catch((error) => {
+                console.error("Sign Out Error:", error);
+            });
+        }
+
+        // Submit Research Paper
+        function submitResearch() {
+            const researchContent = document.getElementById("research-content").value;
+            const pdfFile = document.getElementById("pdf-upload").files[0];
+
+            // Check for file size (limit 2MB)
+            if (pdfFile && pdfFile.size > 2 * 1024 * 1024) {
+                alert("File exceeds 2MB, please compress it.");
+                return;
+            }
+
+            // Upload PDF to Firebase Storage (if exists)
+            if (pdfFile) {
+                const storageRef = storage.ref(`researchPapers/${pdfFile.name}`);
+                storageRef.put(pdfFile).then((snapshot) => {
+                    console.log('PDF uploaded:', snapshot);
+                    storageRef.getDownloadURL().then((url) => {
+                        saveResearchToDB(researchContent, url); // Save with PDF URL
+                    });
+                });
+            } else {
+                saveResearchToDB(researchContent, null); // Save without PDF
+            }
+        }
+
+        // Save Research to Realtime Database
+        function saveResearchToDB(content, pdfURL) {
+            const dbRef = db.ref('researchPapers').push();
+            dbRef.set({
+                content: content,
+                pdfURL: pdfURL,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                author: auth.currentUser.displayName || "Anonymous"
+            }).then(() => {
+                console.log('Research paper submitted');
+                displayResearchFeed(); // Refresh feed after submission
+            }).catch((error) => {
+                console.error('Submit error:', error);
+            });
+        }
+
+        // Display Research Papers Feed
+        function displayResearchFeed() {
+            const feed = document.getElementById('research-feed');
+            const dbRef = db.ref('researchPapers');
+
+            dbRef.on('value', (snapshot) => {
+                feed.innerHTML = ''; // Clear feed
+                snapshot.forEach((childSnapshot) => {
+                    const paperData = childSnapshot.val();
+                    const paperElement = `
+                      <div>
+                        <h4>By ${paperData.author}</h4>
+                        <p>${paperData.content}</p>
+                        ${paperData.pdfURL ? `<a href="${paperData.pdfURL}" target="_blank">Download PDF</a>` : ''}
+                        <textarea placeholder="Add comment"></textarea>
+                        <button onclick="addComment('${childSnapshot.key}')">Comment</button>
+                        <div id="comments-${childSnapshot.key}"></div>
+                      </div>
+                    `;
+                    feed.innerHTML += paperElement;
+                    loadComments(childSnapshot.key); // Load comments for this paper
+                });
+            });
+        }
+
+        // Load comments for a research paper
+        function loadComments(paperID) {
+            const commentsRef = db.ref(`comments/${paperID}`);
+            const commentsDiv = document.getElementById(`comments-${paperID}`);
+
+            commentsRef.on('value', (snapshot) => {
+                commentsDiv.innerHTML = ''; // Clear comments
+                snapshot.forEach((commentSnapshot) => {
+                    const commentData = commentSnapshot.val();
+                    commentsDiv.innerHTML += `<p><strong>${commentData.author}:</strong> ${commentData.text}</p>`;
+                });
+            });
+        }
+
+        // Add a comment to a research paper
+        function addComment(paperID) {
+            const commentText = document.querySelector(`[id='comments-${paperID}'] textarea`).value;
+            const commentsRef = db.ref(`comments/${paperID}`).push();
+            commentsRef.set({
+                text: commentText,
+                author: auth.currentUser.displayName || "Anonymous"
+            });
+        }
+
+        // Initialize feed on page load
+        window.onload = displayResearchFeed;
+    </script>
 </body>
 </html>
