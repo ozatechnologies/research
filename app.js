@@ -53,12 +53,13 @@ submitBtn.addEventListener('click', () => {
             alert("Article submitted successfully! Awaiting approval.");
             titleInput.value = '';
             descriptionInput.value = '';
+        }).catch((error) => {
+            console.error("Error submitting article:", error);
         });
     } else {
         alert("Please fill in both fields.");
     }
 });
-
 // Load approved articles
 function loadApprovedArticles() {
     db.ref('articles').orderByChild('approved').equalTo(true).on('value', snapshot => {
